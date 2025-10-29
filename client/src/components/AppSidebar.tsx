@@ -87,29 +87,37 @@ export function AppSidebar({
             <SidebarGroupLabel>AI Model</SidebarGroupLabel>
           </div>
           <SidebarGroupContent>
-            <div className="flex flex-col gap-2 px-2">
-              <Button
-                variant={currentModel === "gemini" ? "default" : "ghost"}
-                size="sm"
-                className="w-full justify-start"
+            <div className="flex flex-col gap-1 px-2">
+              <button
                 onClick={() => onModelChange("gemini")}
                 data-testid="button-select-gemini"
+                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  currentModel === "gemini"
+                    ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
+                }`}
               >
-                <MessageCircle className="h-4 w-4 mr-2" />
-                Gemini
-                <Badge variant="secondary" className="ml-auto text-xs">Therapy</Badge>
-              </Button>
-              <Button
-                variant={currentModel === "milesai" ? "default" : "ghost"}
-                size="sm"
-                className="w-full justify-start"
+                <div className="flex items-center">
+                  <MessageCircle className="w-5 h-5 mr-3" />
+                  <span className="font-medium">Gemini</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">Therapy</Badge>
+              </button>
+              <button
                 onClick={() => onModelChange("milesai")}
                 data-testid="button-select-milesai"
+                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                  currentModel === "milesai"
+                    ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300"
+                    : "text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
+                }`}
               >
-                <Code2 className="h-4 w-4 mr-2" />
-                MilesAI
-                <Badge variant="secondary" className="ml-auto text-xs">Dev</Badge>
-              </Button>
+                <div className="flex items-center">
+                  <Code2 className="w-5 h-5 mr-3" />
+                  <span className="font-medium">MilesAI</span>
+                </div>
+                <Badge variant="secondary" className="text-xs">Dev</Badge>
+              </button>
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
