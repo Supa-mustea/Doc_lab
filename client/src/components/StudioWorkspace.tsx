@@ -33,6 +33,7 @@ interface StudioWorkspaceProps {
   onFileDelete: (fileId: string) => void;
   onCommandExecute: (command: string) => void;
   terminalOutput?: string;
+  currentModel: "gemini" | "milesai";
 }
 
 export function StudioWorkspace({
@@ -44,6 +45,7 @@ export function StudioWorkspace({
   onFileDelete,
   onCommandExecute,
   terminalOutput = "",
+  currentModel
 }: StudioWorkspaceProps) {
   const [activeTab, setActiveTab] = useState("editor");
   const [newFileName, setNewFileName] = useState("");

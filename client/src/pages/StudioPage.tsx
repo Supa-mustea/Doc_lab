@@ -7,6 +7,7 @@ import type { StudioFile, TerminalCommand } from "@shared/schema";
 export default function StudioPage() {
   const [activeFileId, setActiveFileId] = useState<string>();
   const [terminalOutput, setTerminalOutput] = useState("");
+  const [currentModel, setCurrentModel] = useState<"milesai" | "gemini">("milesai");
 
   // Fetch studio files
   const { data: files = [] } = useQuery<StudioFile[]>({
@@ -58,7 +59,7 @@ export default function StudioPage() {
   // Execute command mutation
   const executeCommand = useMutation({
     mutationFn: async (command: string) => {
-      return await apiRequest("POST", "/api/studio/terminal", { command });
+      return await apiRequest("POST", "/api/studio/terminal", { command, model: currentModel });
     },
     onSuccess: (data: any) => {
       setTerminalOutput((prev) => prev + "\n$ " + data.command + "\n" + (data.output || ""));
@@ -91,6 +92,10 @@ export default function StudioPage() {
     executeCommand.mutate(command);
   };
 
+  const handleModelChange = (model: "milesai" | "gemini") => {
+    setCurrentModel(model);
+  };
+
   return (
     <div className="h-full">
       <StudioWorkspace
@@ -102,6 +107,8 @@ export default function StudioPage() {
         onFileDelete={handleFileDelete}
         onCommandExecute={handleCommandExecute}
         terminalOutput={terminalOutput}
+        currentModel={currentModel}
+        onModelChange={handleModelChange}
       />
     </div>
   );

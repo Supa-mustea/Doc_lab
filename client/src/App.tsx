@@ -67,7 +67,9 @@ function Router() {
           <Switch>
             <Route path="/" component={() => <ChatPage currentModel={currentModel} />} />
             <Route path="/chat/:id" component={() => <ChatPage currentModel={currentModel} />} />
-            <Route path="/studio" component={StudioPage} />
+            <Route path="/studio">
+            <StudioPage currentModel={currentModel} />
+          </Route>
             <Route component={NotFound} />
           </Switch>
         </main>

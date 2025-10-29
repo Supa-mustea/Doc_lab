@@ -8,6 +8,8 @@ Follow these instructions when using this blueprint:
 4. gpt-5 doesn't support temperature parameter, do not use it.
 */
 
+import { GoogleGenAI } from "@google/genai";
+
 // Check if we're using OpenRouter or direct OpenAI/DeepSeek
 const isOpenRouter = process.env.OPENAI_API_KEY?.startsWith("sk-or-");
 const baseURL = isOpenRouter 
@@ -22,6 +24,8 @@ const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
   baseURL,
 });
+
+const geminiAI = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY || "" });
 
 // Development assistant system prompt for MilesAI
 const DEV_SYSTEM_PROMPT = `You are MilesAI, an advanced software development assistant. Your role is to:
@@ -40,9 +44,28 @@ const DEV_SYSTEM_PROMPT = `You are MilesAI, an advanced software development ass
 Be precise, technical, and thorough. Provide working code solutions with clear explanations. Format code properly and include comments when helpful.`;
 
 export async function generateDevResponse(
-  messages: Array<{ role: string; content: string }>
+  messages: Array<{ role: string; content: string }>,
+  model: "milesai" | "gemini" = "milesai"
 ): Promise<string> {
   try {
+    if (model === "gemini") {
+      const contents = messages.map((msg) => ({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }],
+      }));
+
+      const response = await geminiAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: DEV_SYSTEM_PROMPT,
+          temperature: 0.7,
+        },
+        contents,
+      });
+
+      return response.text || "I'm ready to help with your development tasks.";
+    }
+
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [
@@ -57,16 +80,41 @@ export async function generateDevResponse(
 
     return response.choices[0]?.message?.content || "I'm ready to help with your development tasks.";
   } catch (error) {
-    console.error("MilesAI API error:", error);
+    console.error("Dev AI API error:", error);
     throw new Error("Failed to generate dev response: " + (error instanceof Error ? error.message : String(error)));
   }
 }
 
 export async function generateDevResponseStream(
   messages: Array<{ role: string; content: string }>,
-  onChunk: (chunk: string) => void
+  onChunk: (chunk: string) => void,
+  model: "milesai" | "gemini" = "milesai"
 ): Promise<void> {
   try {
+    if (model === "gemini") {
+      const contents = messages.map((msg) => ({
+        role: msg.role === "assistant" ? "model" : "user",
+        parts: [{ text: msg.content }],
+      }));
+
+      const stream = await geminiAI.models.generateContentStream({
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: DEV_SYSTEM_PROMPT,
+          temperature: 0.7,
+        },
+        contents,
+      });
+
+      for await (const chunk of stream) {
+        const text = chunk.text || "";
+        if (text) {
+          onChunk(text);
+        }
+      }
+      return;
+    }
+
     const stream = await openai.chat.completions.create({
       model: MODEL,
       messages: [
@@ -87,19 +135,37 @@ export async function generateDevResponseStream(
       }
     }
   } catch (error) {
-    console.error("MilesAI streaming error:", error);
+    console.error("Dev AI streaming error:", error);
     throw new Error("Failed to stream dev response");
   }
 }
 
-export async function generateCodeFromDescription(description: string): Promise<string> {
+export async function generateCodeFromDescription(description: string, model: "milesai" | "gemini" = "milesai"): Promise<string> {
   try {
+    const systemPrompt = "You are a code generation expert. Generate clean, working code based on user descriptions. Only output the code, no explanations unless asked.";
+    
+    if (model === "gemini") {
+      const response = await geminiAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.7,
+        },
+        contents: [{
+          role: "user",
+          parts: [{ text: description }],
+        }],
+      });
+
+      return response.text || "";
+    }
+
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [
         {
           role: "system",
-          content: "You are a code generation expert. Generate clean, working code based on user descriptions. Only output the code, no explanations unless asked.",
+          content: systemPrompt,
         },
         {
           role: "user",
@@ -116,18 +182,37 @@ export async function generateCodeFromDescription(description: string): Promise<
   }
 }
 
-export async function analyzeCode(code: string): Promise<string> {
+export async function analyzeCode(code: string, model: "milesai" | "gemini" = "milesai"): Promise<string> {
   try {
+    const systemPrompt = "You are a code review expert. Analyze the provided code for bugs, performance issues, security vulnerabilities, and suggest improvements.";
+    const userPrompt = `Analyze this code:\n\n${code}`;
+    
+    if (model === "gemini") {
+      const response = await geminiAI.models.generateContent({
+        model: "gemini-2.5-flash",
+        config: {
+          systemInstruction: systemPrompt,
+          temperature: 0.7,
+        },
+        contents: [{
+          role: "user",
+          parts: [{ text: userPrompt }],
+        }],
+      });
+
+      return response.text || "";
+    }
+
     const response = await openai.chat.completions.create({
       model: MODEL,
       messages: [
         {
           role: "system",
-          content: "You are a code review expert. Analyze the provided code for bugs, performance issues, security vulnerabilities, and suggest improvements.",
+          content: systemPrompt,
         },
         {
           role: "user",
-          content: `Analyze this code:\n\n${code}`,
+          content: userPrompt,
         },
       ],
       max_completion_tokens: 8192,
