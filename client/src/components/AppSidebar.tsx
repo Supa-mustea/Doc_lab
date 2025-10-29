@@ -34,16 +34,16 @@ export function AppSidebar({
   const isStudio = location.startsWith("/studio");
 
   return (
-    <Sidebar>
-      <SidebarHeader className="border-b p-4">
+    <Sidebar collapsible="offcanvas">
+      <SidebarHeader className="border-b p-3 md:p-4">
         <div className="flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
-              <span className="text-sm font-bold">Dr</span>
+          <div className="flex items-center gap-2 min-w-0">
+            <div className="flex h-7 w-7 md:h-8 md:w-8 items-center justify-center rounded-lg bg-primary text-primary-foreground shrink-0">
+              <span className="text-xs md:text-sm font-bold">Dr</span>
             </div>
-            <div>
-              <h1 className="text-base font-bold">Dr's Lab</h1>
-              <p className="text-xs text-muted-foreground">AI Platform</p>
+            <div className="min-w-0">
+              <h1 className="text-sm md:text-base font-bold truncate">Dr's Lab</h1>
+              <p className="text-xs text-muted-foreground truncate">AI Platform</p>
             </div>
           </div>
           <Button
@@ -51,8 +51,9 @@ export function AppSidebar({
             variant="ghost"
             onClick={() => setTheme(theme === "light" ? "dark" : "light")}
             data-testid="button-theme-toggle"
+            className="shrink-0 h-7 w-7 md:h-8 md:w-8"
           >
-            {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
+            {theme === "light" ? <Moon className="h-3 w-3 md:h-4 md:w-4" /> : <Sun className="h-3 w-3 md:h-4 md:w-4" />}
           </Button>
         </div>
       </SidebarHeader>
@@ -91,32 +92,32 @@ export function AppSidebar({
               <button
                 onClick={() => onModelChange("gemini")}
                 data-testid="button-select-gemini"
-                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`w-full flex items-center justify-between p-2 md:p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                   currentModel === "gemini"
                     ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300"
                     : "text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
                 }`}
               >
-                <div className="flex items-center">
-                  <MessageCircle className="w-5 h-5 mr-3" />
-                  <span className="font-medium">Gemini</span>
+                <div className="flex items-center min-w-0">
+                  <MessageCircle className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3 shrink-0" />
+                  <span className="font-medium text-sm md:text-base truncate">Gemini</span>
                 </div>
-                <Badge variant="secondary" className="text-xs">Therapy</Badge>
+                <Badge variant="secondary" className="text-xs shrink-0">Therapy</Badge>
               </button>
               <button
                 onClick={() => onModelChange("milesai")}
                 data-testid="button-select-milesai"
-                className={`w-full flex items-center justify-between p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
+                className={`w-full flex items-center justify-between p-2 md:p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
                   currentModel === "milesai"
                     ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300"
                     : "text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
                 }`}
               >
-                <div className="flex items-center">
-                  <Code2 className="w-5 h-5 mr-3" />
-                  <span className="font-medium">MilesAI</span>
+                <div className="flex items-center min-w-0">
+                  <Code2 className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3 shrink-0" />
+                  <span className="font-medium text-sm md:text-base truncate">MilesAI</span>
                 </div>
-                <Badge variant="secondary" className="text-xs">Dev</Badge>
+                <Badge variant="secondary" className="text-xs shrink-0">Dev</Badge>
               </button>
             </div>
           </SidebarGroupContent>
@@ -138,20 +139,20 @@ export function AppSidebar({
           <SidebarGroupContent>
             <SidebarMenu>
               {conversations.length === 0 ? (
-                <div className="px-4 py-6 text-center text-sm text-muted-foreground">
+                <div className="px-3 md:px-4 py-4 md:py-6 text-center text-xs md:text-sm text-muted-foreground">
                   No conversations yet
                 </div>
               ) : (
                 conversations.map((conv) => (
                   <SidebarMenuItem key={conv.id}>
-                    <SidebarMenuButton asChild>
+                    <SidebarMenuButton asChild size="sm">
                       <Link href={`/chat/${conv.id}`} data-testid={`link-conversation-${conv.id}`}>
                         {conv.model === "gemini" ? (
-                          <MessageCircle className="h-4 w-4" />
+                          <MessageCircle className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                         ) : (
-                          <Code2 className="h-4 w-4" />
+                          <Code2 className="h-3 w-3 md:h-4 md:w-4 shrink-0" />
                         )}
-                        <span className="truncate">{conv.title}</span>
+                        <span className="truncate text-xs md:text-sm">{conv.title}</span>
                       </Link>
                     </SidebarMenuButton>
                   </SidebarMenuItem>

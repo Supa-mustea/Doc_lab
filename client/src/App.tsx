@@ -54,11 +54,11 @@ function Router() {
         conversations={conversations}
         onNewConversation={handleNewConversation}
       />
-      <div className="flex flex-col flex-1 min-w-0">
-        <header className="flex items-center justify-between p-3 border-b bg-background sticky top-0 z-10">
+      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
+        <header className="flex items-center justify-between px-3 py-2 md:p-3 border-b bg-background sticky top-0 z-10 shrink-0">
           <div className="flex items-center gap-2">
-            <SidebarTrigger data-testid="button-sidebar-toggle" />
-            <h2 className="text-sm font-semibold">
+            <SidebarTrigger data-testid="button-sidebar-toggle" className="md:hidden" />
+            <h2 className="text-sm md:text-base font-semibold truncate">
               {location.startsWith("/studio") ? "Studio Workspace" : "Chat"}
             </h2>
           </div>
@@ -88,8 +88,8 @@ export default function App() {
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="drslab-theme">
         <TooltipProvider>
-          <SidebarProvider style={style as React.CSSProperties}>
-            <div className="flex h-screen w-full">
+          <SidebarProvider style={style as React.CSSProperties} defaultOpen={false}>
+            <div className="flex h-screen w-full overflow-hidden">
               <Router />
             </div>
           </SidebarProvider>

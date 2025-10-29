@@ -47,9 +47,9 @@ export function ChatInput({
   }, [message]);
 
   return (
-    <div className="border-t bg-background p-4">
-      <div className="mx-auto max-w-4xl">
-        <div className="flex items-end gap-2">
+    <div className="border-t bg-background p-2 md:p-4">
+      <div className="mx-auto max-w-4xl w-full">
+        <div className="flex items-end gap-1 md:gap-2">
           {onVoiceToggle && (
             <Button
               size="icon"
@@ -58,14 +58,15 @@ export function ChatInput({
               disabled={isLoading}
               data-testid="button-voice-toggle"
               className={cn(
+                "h-9 w-9 md:h-10 md:w-10 shrink-0",
                 isVoiceActive && "animate-pulse"
               )}
             >
-              {isVoiceActive ? <MicOff className="h-4 w-4" /> : <Mic className="h-4 w-4" />}
+              {isVoiceActive ? <MicOff className="h-3 w-3 md:h-4 md:w-4" /> : <Mic className="h-3 w-3 md:h-4 md:w-4" />}
             </Button>
           )}
           
-          <div className="flex-1 flex items-end gap-2 rounded-lg border bg-card p-2">
+          <div className="flex-1 flex items-end gap-1 md:gap-2 rounded-lg border bg-card p-1.5 md:p-2">
             <Textarea
               ref={textareaRef}
               value={message}
@@ -74,7 +75,7 @@ export function ChatInput({
               placeholder={placeholder}
               disabled={isLoading}
               data-testid="input-chat-message"
-              className="min-h-[40px] max-h-[200px] resize-none border-0 focus-visible:ring-0 p-2 text-base"
+              className="min-h-[36px] md:min-h-[40px] max-h-[150px] md:max-h-[200px] resize-none border-0 focus-visible:ring-0 p-1.5 md:p-2 text-sm md:text-base"
               rows={1}
             />
             <Button
@@ -82,8 +83,9 @@ export function ChatInput({
               onClick={handleSend}
               disabled={!message.trim() || isLoading}
               data-testid="button-send-message"
+              className="h-8 w-8 md:h-10 md:w-10 shrink-0"
             >
-              <Send className="h-4 w-4" />
+              <Send className="h-3 w-3 md:h-4 md:w-4" />
             </Button>
           </div>
         </div>

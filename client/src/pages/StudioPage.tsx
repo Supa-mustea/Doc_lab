@@ -204,18 +204,18 @@ export default function StudioPage() {
     return (
       <div>
         <div
-          className="flex items-center gap-2 py-1.5 px-2 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer group"
-          style={{ paddingLeft: `${level * 16 + 8}px` }}
+          className="flex items-center gap-1 md:gap-2 py-1 md:py-1.5 px-1 md:px-2 hover:bg-slate-200 dark:hover:bg-slate-700 cursor-pointer group"
+          style={{ paddingLeft: `${level * 12 + 4}px` }}
           onClick={() => isFolder ? onToggleFolder(node.path) : onFileClick(node.path)}
         >
           {isFolder && (
-            isExpanded ? <ChevronDown className="w-4 h-4" /> : <ChevronRight className="w-4 h-4" />
+            isExpanded ? <ChevronDown className="w-3 h-3 md:w-4 md:h-4 shrink-0" /> : <ChevronRight className="w-3 h-3 md:w-4 md:h-4 shrink-0" />
           )}
-          <Icon className="w-4 h-4" />
-          <span className="text-sm flex-1">{node.name}</span>
+          <Icon className="w-3 h-3 md:w-4 md:h-4 shrink-0" />
+          <span className="text-xs md:text-sm flex-1 truncate">{node.name}</span>
           <button
             onClick={(e) => { e.stopPropagation(); onDelete(node.path, node.type); }}
-            className="opacity-0 group-hover:opacity-100 p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded"
+            className="opacity-0 group-hover:opacity-100 p-0.5 md:p-1 hover:bg-red-100 dark:hover:bg-red-900 rounded shrink-0"
           >
             <Trash2 className="w-3 h-3" />
           </button>
@@ -249,7 +249,7 @@ export default function StudioPage() {
         <textarea
           value={content}
           onChange={(e) => onContentChange(e.target.value)}
-          className="absolute inset-0 p-4 font-mono text-sm resize-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
+          className="absolute inset-0 p-2 md:p-4 font-mono text-xs md:text-sm resize-none bg-white dark:bg-slate-900 text-slate-900 dark:text-slate-100 outline-none"
           spellCheck="false"
         />
       </div>
@@ -274,32 +274,32 @@ export default function StudioPage() {
   return (
     <div className="flex h-full w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 overflow-hidden">
       {/* Activity Bar */}
-      <div className="w-14 bg-slate-200/50 dark:bg-black/20 flex flex-col items-center justify-between py-4">
-        <div className="flex flex-col items-center gap-4">
+      <div className="hidden md:flex w-12 lg:w-14 bg-slate-200/50 dark:bg-black/20 flex-col items-center justify-between py-2 md:py-4">
+        <div className="flex flex-col items-center gap-2 md:gap-4">
           {SideNavItems.map(item => (
             <button
               key={item.type}
               onClick={() => setActiveSideView(item.type as SideViewType)}
               title={item.name}
-              className={`p-2 rounded-lg transition-colors ${activeSideView === item.type ? 'bg-indigo-200 dark:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-300/50 dark:hover:bg-slate-700/50'}`}
+              className={`p-1.5 md:p-2 rounded-lg transition-colors ${activeSideView === item.type ? 'bg-indigo-200 dark:bg-indigo-500/30 text-indigo-700 dark:text-indigo-300' : 'hover:bg-slate-300/50 dark:hover:bg-slate-700/50'}`}
             >
-              <item.icon className="w-6 h-6" />
+              <item.icon className="w-5 h-5 md:w-6 md:h-6" />
             </button>
           ))}
         </div>
       </div>
 
       {/* Sidebar */}
-      <aside className="w-64 border-r dark:border-slate-700/50 flex flex-col bg-slate-100 dark:bg-slate-900">
-        <header className="p-3 border-b dark:border-slate-700/50 flex items-center justify-between gap-2">
-          <h2 className="font-semibold uppercase text-sm tracking-wider">{activeSideView}</h2>
+      <aside className="w-48 md:w-56 lg:w-64 border-r dark:border-slate-700/50 flex flex-col bg-slate-100 dark:bg-slate-900 shrink-0">
+        <header className="p-2 md:p-3 border-b dark:border-slate-700/50 flex items-center justify-between gap-1 md:gap-2">
+          <h2 className="font-semibold uppercase text-xs md:text-sm tracking-wider truncate">{activeSideView}</h2>
           {activeSideView === 'explorer' && (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 md:gap-1">
               <button onClick={() => handleCreateItem('file')} title="New File" className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700">
-                <FilePlus className="w-5 h-5" />
+                <FilePlus className="w-4 h-4 md:w-5 md:h-5" />
               </button>
               <button onClick={() => handleCreateItem('folder')} title="New Folder" className="p-1 rounded hover:bg-slate-200 dark:hover:bg-slate-700">
-                <FolderPlus className="w-5 h-5" />
+                <FolderPlus className="w-4 h-4 md:w-5 md:h-5" />
               </button>
             </div>
           )}
@@ -336,16 +336,16 @@ export default function StudioPage() {
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col overflow-hidden" ref={mainContentAreaRef}>
         {/* Editor Tabs */}
-        <div className="flex items-center border-b dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 overflow-x-auto">
+        <div className="flex items-center border-b dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 overflow-x-auto scrollbar-thin">
           {openTabs.map(tab => (
             <button
               key={tab.id}
               onClick={() => setActiveTabId(tab.id)}
-              className={`flex items-center gap-2 text-sm p-2 border-r dark:border-slate-700/50 whitespace-nowrap ${activeTabId === tab.id ? 'bg-white dark:bg-slate-800' : 'hover:bg-slate-200/50 dark:hover:bg-slate-700/50'}`}
+              className={`flex items-center gap-1 md:gap-2 text-xs md:text-sm p-1.5 md:p-2 border-r dark:border-slate-700/50 whitespace-nowrap ${activeTabId === tab.id ? 'bg-white dark:bg-slate-800' : 'hover:bg-slate-200/50 dark:hover:bg-slate-700/50'}`}
             >
-              <span>{tab.name}</span>
-              <div onClick={(e) => handleTabClose(e, tab.id)} className="p-0.5 rounded hover:bg-slate-300 dark:hover:bg-slate-600">
-                <X className="w-3.5 h-3.5" />
+              <span className="truncate max-w-[100px] md:max-w-none">{tab.name}</span>
+              <div onClick={(e) => handleTabClose(e, tab.id)} className="p-0.5 rounded hover:bg-slate-300 dark:hover:bg-slate-600 shrink-0">
+                <X className="w-3 h-3 md:w-3.5 md:h-3.5" />
               </div>
             </button>
           ))}
@@ -371,42 +371,42 @@ export default function StudioPage() {
 
         {/* Bottom Panel */}
         <div className="w-full bg-slate-50 dark:bg-slate-800/50 border-t dark:border-slate-700/50" style={{ height: isBottomPanelOpen ? `${bottomPanelHeight}px` : 'auto' }}>
-          <div className="flex items-center border-b dark:border-slate-700/50 overflow-x-auto">
+          <div className="flex items-center border-b dark:border-slate-700/50 overflow-x-auto scrollbar-thin">
             {BottomNavItems.map(item => (
               <button
                 key={item.type}
                 onClick={() => { setActiveBottomTab(item.type as BottomTabType); setIsBottomPanelOpen(true); }}
-                className={`flex items-center gap-2 text-sm p-2 whitespace-nowrap ${activeBottomTab === item.type && isBottomPanelOpen ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500' : 'hover:bg-slate-200/50 dark:hover:bg-slate-700/50'}`}
+                className={`flex items-center gap-1 md:gap-2 text-xs md:text-sm p-1.5 md:p-2 whitespace-nowrap ${activeBottomTab === item.type && isBottomPanelOpen ? 'text-indigo-600 dark:text-indigo-400 border-b-2 border-indigo-500' : 'hover:bg-slate-200/50 dark:hover:bg-slate-700/50'}`}
               >
-                <item.icon className="w-4 h-4" />
-                <span>{item.name}</span>
+                <item.icon className="w-3 h-3 md:w-4 md:h-4 shrink-0" />
+                <span className="hidden sm:inline">{item.name}</span>
               </button>
             ))}
             <div className="flex-1"></div>
-            <button onClick={() => setIsBottomPanelOpen(!isBottomPanelOpen)} className="p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/50">
-              {isBottomPanelOpen ? <ChevronDown className="w-5 h-5" /> : <ChevronRight className="w-5 h-5" />}
+            <button onClick={() => setIsBottomPanelOpen(!isBottomPanelOpen)} className="p-1.5 md:p-2 hover:bg-slate-200/50 dark:hover:bg-slate-700/50 shrink-0">
+              {isBottomPanelOpen ? <ChevronDown className="w-4 h-4 md:w-5 md:h-5" /> : <ChevronRight className="w-4 h-4 md:w-5 md:h-5" />}
             </button>
           </div>
           {isBottomPanelOpen && (
-            <div className="h-full pb-10 overflow-auto">
+            <div className="h-full pb-6 md:pb-10 overflow-auto">
               {activeBottomTab === 'terminal' && (
-                <div className="h-full bg-black text-green-400 font-mono text-sm p-4">
-                  <pre>Terminal ready. Type commands here...</pre>
+                <div className="h-full bg-black text-green-400 font-mono text-xs md:text-sm p-2 md:p-4">
+                  <pre className="whitespace-pre-wrap break-all">Terminal ready. Type commands here...</pre>
                 </div>
               )}
               {activeBottomTab === 'explanation' && (
-                <div className="h-full p-4">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">AI Console - Coming soon</p>
+                <div className="h-full p-2 md:p-4">
+                  <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">AI Console - Coming soon</p>
                 </div>
               )}
               {activeBottomTab === 'preview' && (
-                <div className="h-full p-4 bg-slate-200 dark:bg-slate-900">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Live Preview - Coming soon</p>
+                <div className="h-full p-2 md:p-4 bg-slate-200 dark:bg-slate-900">
+                  <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Live Preview - Coming soon</p>
                 </div>
               )}
               {activeBottomTab === 'deploy' && (
-                <div className="h-full p-4">
-                  <p className="text-sm text-slate-600 dark:text-slate-400">Deployments - Coming soon</p>
+                <div className="h-full p-2 md:p-4">
+                  <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Deployments - Coming soon</p>
                 </div>
               )}
             </div>
