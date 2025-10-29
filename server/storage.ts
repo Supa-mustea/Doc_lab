@@ -90,8 +90,10 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
     const conversation: Conversation = {
-      ...insertConversation,
       id,
+      userId: insertConversation.userId || null,
+      title: insertConversation.title,
+      model: insertConversation.model,
       createdAt: now,
       updatedAt: now,
     };
@@ -165,8 +167,11 @@ export class MemStorage implements IStorage {
     const id = randomUUID();
     const now = new Date();
     const file: StudioFile = {
-      ...insertFile,
       id,
+      userId: insertFile.userId || null,
+      path: insertFile.path,
+      content: insertFile.content,
+      language: insertFile.language || null,
       createdAt: now,
       updatedAt: now,
     };
@@ -203,8 +208,11 @@ export class MemStorage implements IStorage {
   async createTerminalCommand(insertCommand: InsertTerminalCommand): Promise<TerminalCommand> {
     const id = randomUUID();
     const command: TerminalCommand = {
-      ...insertCommand,
       id,
+      userId: insertCommand.userId || null,
+      command: insertCommand.command,
+      output: insertCommand.output || null,
+      exitCode: insertCommand.exitCode || null,
       createdAt: new Date(),
     };
     this.terminalCommands.set(id, command);

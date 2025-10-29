@@ -72,7 +72,7 @@ export default function StudioPage() {
 
   const handleFileCreate = async (path: string) => {
     const result = await createFile.mutateAsync(path);
-    if (result && 'id' in result) {
+    if (result && typeof result === 'object' && 'id' in result && typeof result.id === 'string') {
       setActiveFileId(result.id);
     }
   };

@@ -67,7 +67,7 @@ export async function generateTherapyResponseStream(
       contents,
     });
 
-    for await (const chunk of response.stream) {
+    for await (const chunk of response) {
       const text = chunk.text || "";
       if (text) {
         onChunk(text);
