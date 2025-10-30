@@ -1,3 +1,4 @@
+
 import { Switch, Route, useLocation } from "wouter";
 import { useState, useEffect } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
@@ -5,8 +6,6 @@ import { queryClient, apiRequest } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { SidebarProvider, SidebarTrigger } from "@/components/ui/sidebar";
-import { AppSidebar } from "@/components/AppSidebar";
 import { ThemeProvider } from "@/components/ThemeProvider";
 import ChatPage from "@/pages/ChatPage";
 import StudioPage from "@/pages/StudioPage";
@@ -16,13 +15,20 @@ import type { Conversation } from "@shared/schema";
 function Router() {
   const [currentModel, setCurrentModel] = useState<"gemini" | "milesai">("gemini");
   const [location, setLocation] = useLocation();
+  const [view, setView] = useState<'chat' | 'studio'>('chat');
 
-  // Fetch conversations
+  useEffect(() => {
+    if (location.startsWith('/studio')) {
+      setView('studio');
+    } else {
+      setView('chat');
+    }
+  }, [location]);
+
   const { data: conversations = [] } = useQuery<Conversation[]>({
     queryKey: ["/api/conversations"],
   });
 
-  // Create conversation mutation
   const createConversation = useMutation({
     mutationFn: async () => {
       return await apiRequest("POST", "/api/conversations", {
@@ -46,53 +52,60 @@ function Router() {
     setCurrentModel(model);
   };
 
+  const handleSetView = (newView: 'chat' | 'studio') => {
+    setView(newView);
+    if (newView === 'studio') {
+      setLocation('/studio');
+    } else {
+      setLocation('/');
+    }
+  };
+
   return (
-    <>
-      <AppSidebar
-        currentModel={currentModel}
-        onModelChange={handleModelChange}
-        conversations={conversations}
-        onNewConversation={handleNewConversation}
-      />
-      <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
-        <header className="flex items-center justify-between px-3 py-2 md:p-3 border-b bg-background sticky top-0 z-10 shrink-0">
-          <div className="flex items-center gap-2">
-            <SidebarTrigger data-testid="button-sidebar-toggle" className="md:hidden" />
-            <h2 className="text-sm md:text-base font-semibold truncate">
-              {location.startsWith("/studio") ? "Studio Workspace" : "Chat"}
-            </h2>
-          </div>
-        </header>
-        <main className="flex-1 overflow-hidden">
-          <Switch>
-            <Route path="/" component={() => <ChatPage currentModel={currentModel} />} />
-            <Route path="/chat/:id" component={() => <ChatPage currentModel={currentModel} />} />
-            <Route path="/studio">
-            <StudioPage currentModel={currentModel} />
-          </Route>
-            <Route component={NotFound} />
-          </Switch>
-        </main>
-      </div>
-    </>
+    <div className="flex h-screen w-screen bg-slate-100 dark:bg-slate-900 text-gray-800 dark:text-gray-200 font-sans antialiased overflow-hidden">
+      <Switch>
+        <Route path="/" component={() => (
+          <ChatPage 
+            currentModel={currentModel} 
+            onModelChange={handleModelChange}
+            conversations={conversations}
+            onNewConversation={handleNewConversation}
+            currentView={view}
+            onSetView={handleSetView}
+          />
+        )} />
+        <Route path="/chat/:id" component={() => (
+          <ChatPage 
+            currentModel={currentModel}
+            onModelChange={handleModelChange}
+            conversations={conversations}
+            onNewConversation={handleNewConversation}
+            currentView={view}
+            onSetView={handleSetView}
+          />
+        )} />
+        <Route path="/studio" component={() => (
+          <StudioPage 
+            currentModel={currentModel}
+            onModelChange={handleModelChange}
+            conversations={conversations}
+            onNewConversation={handleNewConversation}
+            currentView={view}
+            onSetView={handleSetView}
+          />
+        )} />
+        <Route component={NotFound} />
+      </Switch>
+    </div>
   );
 }
 
 export default function App() {
-  const style = {
-    "--sidebar-width": "20rem",
-    "--sidebar-width-icon": "4rem",
-  };
-
   return (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider defaultTheme="light" storageKey="drslab-theme">
         <TooltipProvider>
-          <SidebarProvider style={style as React.CSSProperties} defaultOpen={false}>
-            <div className="flex h-screen w-full overflow-hidden">
-              <Router />
-            </div>
-          </SidebarProvider>
+          <Router />
           <Toaster />
         </TooltipProvider>
       </ThemeProvider>
