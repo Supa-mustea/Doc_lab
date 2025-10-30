@@ -1,4 +1,3 @@
-
 import { useState, useEffect, useRef } from "react";
 import { useQuery, useMutation } from "@tanstack/react-query";
 import { useRoute } from "wouter";
@@ -13,6 +12,7 @@ import {
   Settings, Plus, Volume2, VolumeX 
 } from "lucide-react";
 import { useTheme } from "@/components/ThemeProvider";
+import { useLocation } from "wouter";
 
 interface ChatPageProps {
   currentModel: "gemini" | "milesai";
@@ -33,6 +33,7 @@ export default function ChatPage({
 }: ChatPageProps) {
   const [, params] = useRoute("/chat/:id");
   const conversationId = params?.id;
+  const [, setLocation] = useLocation();
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
   const [responseMode, setResponseMode] = useState<'text' | 'voice'>('text');
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -45,7 +46,19 @@ export default function ChatPage({
 
   const sendMessage = useMutation({
     mutationFn: async (content: string) => {
-      if (!conversationId) throw new Error("No conversation selected");
+      if (!conversationId) {
+        // Create a new conversation if none exists
+        const newConv = await apiRequest("POST", "/api/conversations", {
+          title: `New ${currentModel === "gemini" ? "Therapy" : "Dev"} Chat`,
+          model: currentModel,
+        });
+        if (newConv && 'id' in newConv) {
+          setLocation(`/chat/${newConv.id}`);
+          // Now send the message with the new conversation ID
+          return await apiRequest("POST", `/api/messages/${newConv.id}`, { content });
+        }
+        throw new Error("Failed to create conversation");
+      }
       return await apiRequest("POST", "/api/messages", {
         conversationId,
         role: "user",
@@ -91,7 +104,7 @@ export default function ChatPage({
         className={`fixed inset-0 bg-black/60 z-40 transition-opacity md:hidden ${isMobileSidebarOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
         onClick={() => setIsMobileSidebarOpen(false)}
       />
-      
+
       {/* Sidebar */}
       <aside className={`fixed md:static top-0 left-0 w-72 h-full bg-slate-50 dark:bg-slate-900 z-50 flex flex-col justify-between p-4 border-r border-slate-200 dark:border-slate-800 transition-transform md:translate-x-0 ${isMobileSidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div>
@@ -158,7 +171,7 @@ export default function ChatPage({
             <span className="font-medium">New Chat</span>
           </button>
         </div>
-        
+
         {/* Bottom Controls */}
         <div className="space-y-2">
           <button
@@ -243,7 +256,7 @@ export default function ChatPage({
           <div className="max-w-4xl mx-auto">
             <ChatInput 
               onSend={handleSend} 
-              disabled={sendMessage.isPending || !conversationId}
+              disabled={sendMessage.isPending}
             />
           </div>
         </div>

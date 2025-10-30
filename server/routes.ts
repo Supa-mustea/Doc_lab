@@ -194,6 +194,26 @@ export function registerRoutes(app: Express) {
     }
   });
 
+  app.post("/api/studio/ai-assist", async (req, res) => {
+    try {
+      const { messages, context } = req.body;
+      
+      if (!messages || !Array.isArray(messages)) {
+        return res.status(400).json({ error: "Messages array is required" });
+      }
+
+      const lastMessage = messages[messages.length - 1]?.content || "";
+      const contextInfo = context?.files ? `\n\nContext: Files in project: ${context.files.join(', ')}` : '';
+      
+      const response = await milesAi.generateResponse(lastMessage + contextInfo);
+      
+      res.json({ response });
+    } catch (error) {
+      console.error("Error in AI assist:", error);
+      res.status(500).json({ error: "Failed to get AI response" });
+    }
+  });
+
   app.post("/api/studio/terminal", async (req, res) => {
     try {
       const userId = "demo-user";

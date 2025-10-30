@@ -84,7 +84,23 @@ const buildFileTree = (files: Map<string, Pick<StudioFile, 'content' | 'language
   return root.children || [];
 };
 
-export default function StudioPage() {
+interface StudioPageProps {
+  currentModel: "gemini" | "milesai";
+  onModelChange: (model: "gemini" | "milesai") => void;
+  conversations: any[];
+  onNewConversation: () => void;
+  currentView: 'chat' | 'studio';
+  onSetView: (view: 'chat' | 'studio') => void;
+}
+
+export default function StudioPage({
+  currentModel,
+  onModelChange,
+  conversations,
+  onNewConversation,
+  currentView,
+  onSetView
+}: StudioPageProps) {
   const { theme } = useTheme();
   const [localFiles, setLocalFiles] = useState<Map<string, Pick<StudioFile, 'content' | 'language'>>>(() => new Map());
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
