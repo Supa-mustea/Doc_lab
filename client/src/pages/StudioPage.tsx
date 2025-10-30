@@ -13,7 +13,8 @@ import {
   FileText, Folder, Terminal as TerminalIcon, Plus, X, Bug, Monitor,
   File as FileIcon, RefreshCw, ChevronRight, ChevronDown, Github, Zap,
   Upload, Package, Code2, FilePlus, FolderPlus, Trash2, Send, Copy,
-  Play, Square, ArrowUpCircle, Cloud, CheckCircle, AlertCircle
+  Play, Square, ArrowUpCircle, Cloud, CheckCircle, AlertCircle, ArrowLeft,
+  MessageCircle
 } from "lucide-react";
 
 interface StudioFile {
@@ -531,9 +532,35 @@ Current project files: ${Array.from(localFiles.keys()).join(', ')}`
   ];
 
   return (
-    <div className="flex h-full w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 overflow-hidden">
-      {/* Activity Bar */}
-      <div className="hidden md:flex w-12 lg:w-14 bg-slate-200/50 dark:bg-black/20 flex-col items-center justify-between py-2 md:py-4">
+    <div className="flex h-full w-full bg-slate-100 dark:bg-slate-900 text-slate-800 dark:text-slate-200 overflow-hidden flex-col">
+      {/* Studio Header */}
+      <div className="flex items-center justify-between px-3 py-2 border-b dark:border-slate-700 bg-background/95 backdrop-blur shrink-0">
+        <div className="flex items-center gap-2">
+          <Button
+            size="icon"
+            variant="ghost"
+            onClick={() => onSetView('chat')}
+            title="Back to Chat"
+            className="h-8 w-8"
+          >
+            <ArrowLeft className="h-4 w-4" />
+          </Button>
+          <h2 className="font-semibold text-sm md:text-base">Studio Mode</h2>
+        </div>
+        <Button
+          size="sm"
+          variant="outline"
+          onClick={onNewConversation}
+          className="text-xs md:text-sm gap-1"
+        >
+          <MessageCircle className="h-3 w-3 md:h-4 md:w-4" />
+          <span className="hidden sm:inline">New Chat</span>
+        </Button>
+      </div>
+
+      <div className="flex flex-1 min-h-0 overflow-hidden">
+        {/* Activity Bar */}
+        <div className="hidden md:flex w-12 lg:w-14 bg-slate-200/50 dark:bg-black/20 flex-col items-center justify-between py-2 md:py-4">
         <div className="flex flex-col items-center gap-2 md:gap-4">
           {SideNavItems.map(item => (
             <button
@@ -901,6 +928,7 @@ Current project files: ${Array.from(localFiles.keys()).join(', ')}`
             </div>
           )}
         </div>
+      </div>
       </div>
     </div>
   );

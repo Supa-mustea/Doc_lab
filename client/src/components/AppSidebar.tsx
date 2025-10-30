@@ -90,29 +90,21 @@ export function AppSidebar({
         </SidebarGroup>
 
         <SidebarGroup>
-          <div className="flex items-center justify-between px-2">
-            <SidebarGroupLabel>AI Model</SidebarGroupLabel>
-          </div>
+          <SidebarGroupLabel className="px-4">Model</SidebarGroupLabel>
           <SidebarGroupContent>
-            <div className="px-2">
+            <div className="px-3">
               <Select value={currentModel} onValueChange={onModelChange}>
-                <SelectTrigger className="w-full" data-testid="model-selector">
-                  <SelectValue placeholder="Select AI Model" />
+                <SelectTrigger className="w-full h-9 text-sm bg-background" data-testid="model-selector">
+                  <SelectValue>
+                    {currentModel === "gemini" ? "Gemini 2.5 Flash" : "MilesAI"}
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="gemini" data-testid="option-select-gemini">
-                    <div className="flex items-center gap-2">
-                      <MessageCircle className="w-4 h-4" />
-                      <span>DOC</span>
-                      <span className="text-xs text-muted-foreground ml-auto">Therapy</span>
-                    </div>
+                    <span>Gemini 2.5 Flash</span>
                   </SelectItem>
                   <SelectItem value="milesai" data-testid="option-select-milesai">
-                    <div className="flex items-center gap-2">
-                      <Code2 className="w-4 h-4" />
-                      <span>MilesAI</span>
-                      <span className="text-xs text-muted-foreground ml-auto">Dev</span>
-                    </div>
+                    <span>MilesAI</span>
                   </SelectItem>
                 </SelectContent>
               </Select>
