@@ -100,7 +100,7 @@ export function AppSidebar({
               >
                 <div className="flex items-center min-w-0">
                   <MessageCircle className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3 shrink-0" />
-                  <span className="font-medium text-sm md:text-base truncate">Gemini</span>
+                  <span className="font-medium text-sm md:text-base truncate">DOC</span>
                 </div>
                 <Badge variant="secondary" className="text-xs shrink-0">Therapy</Badge>
               </button>

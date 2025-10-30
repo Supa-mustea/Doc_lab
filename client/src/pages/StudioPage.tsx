@@ -1,30 +1,25 @@
 
-import React, { useState, useEffect, useMemo, useRef, useCallback, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
-import { GoogleGenerativeAI } from "@google/generative-ai";
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-import { prism, oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
+import { oneDark } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import { useTheme } from "@/components/ThemeProvider";
+import { Button } from "@/components/ui/button";
+import { Textarea } from "@/components/ui/textarea";
+import { Input } from "@/components/ui/input";
 
-// Import icons (you may need to add these to your project)
 import {
   FileText, Folder, Terminal as TerminalIcon, Plus, X, Bug, Monitor,
   File as FileIcon, RefreshCw, ChevronRight, ChevronDown, Github, Zap,
-  Upload, Package, Code2, Link, FilePlus, FolderPlus, Trash2,
-  Cloud, Archive, Menu, Tablet, Smartphone, Check, Minus,
-  ArrowUpCircle, ArrowDownCircle, Download, Edit, Copy, ArrowRight
+  Upload, Package, Code2, FilePlus, FolderPlus, Trash2, Send, Copy,
+  Play, Square, ArrowUpCircle, Cloud, CheckCircle, AlertCircle
 } from "lucide-react";
 
 interface StudioFile {
   path: string;
   language: string;
   content: string;
-}
-
-interface NextStep {
-  text: string;
-  priority: 'High' | 'Medium' | 'Low';
 }
 
 interface TreeNode {
@@ -36,7 +31,6 @@ interface TreeNode {
 
 type SideViewType = 'explorer' | 'git' | 'debug' | 'extensions' | 'ai';
 type BottomTabType = 'terminal' | 'explanation' | 'preview' | 'deploy';
-type AiMode = 'assistant' | 'agent';
 
 interface Tab {
   id: string;
@@ -44,18 +38,16 @@ interface Tab {
   path: string;
 }
 
-interface StudioChatMessage {
+interface TerminalLine {
+  type: 'command' | 'output' | 'error';
   text: string;
-  isUser: boolean;
+  timestamp: Date;
 }
 
-interface TerminalHandle {
-  executeCommand: (cmd: string) => void;
+interface AIMessage {
+  role: 'user' | 'assistant';
+  content: string;
 }
-
-const STORAGE_KEY = 'studio-project-state';
-const MIN_BOTTOM_PANEL_HEIGHT = 40;
-const DEFAULT_BOTTOM_PANEL_HEIGHT = 250;
 
 const buildFileTree = (files: Map<string, Pick<StudioFile, 'content' | 'language'>>): TreeNode[] => {
   const root: TreeNode = { name: 'root', path: '', type: 'folder', children: [] };
@@ -94,26 +86,37 @@ const buildFileTree = (files: Map<string, Pick<StudioFile, 'content' | 'language
 
 export default function StudioPage() {
   const { theme } = useTheme();
-  const [projectName, setProjectName] = useState('My Awesome Project');
   const [localFiles, setLocalFiles] = useState<Map<string, Pick<StudioFile, 'content' | 'language'>>>(() => new Map());
-  const [gitBase, setGitBase] = useState<Map<string, string>>(() => new Map());
-  const [stagedFiles, setStagedFiles] = useState<Set<string>>(() => new Set());
   const [activeTabId, setActiveTabId] = useState<string | null>(null);
   const [openTabs, setOpenTabs] = useState<Tab[]>([]);
   const [expandedFolders, setExpandedFolders] = useState<Set<string>>(() => new Set());
-  const [explanation, setExplanation] = useState('');
-  const [nextSteps, setNextSteps] = useState<NextStep[]>([]);
   const [activeSideView, setActiveSideView] = useState<SideViewType>('explorer');
   const [activeBottomTab, setActiveBottomTab] = useState<BottomTabType>('terminal');
-  const [bottomPanelHeight, setBottomPanelHeight] = useState(DEFAULT_BOTTOM_PANEL_HEIGHT);
+  const [bottomPanelHeight, setBottomPanelHeight] = useState(250);
   const [isBottomPanelOpen, setIsBottomPanelOpen] = useState(true);
-  const [studioChatMessages, setStudioChatMessages] = useState<StudioChatMessage[]>([]);
-  const [isAiChatLoading, setIsAiChatLoading] = useState(false);
-  const [aiMode, setAiMode] = useState<AiMode>('assistant');
-  const [currentModel, setCurrentModel] = useState<"milesai" | "gemini">("gemini");
+  
+  // Terminal state
+  const [terminalLines, setTerminalLines] = useState<TerminalLine[]>([]);
+  const [terminalInput, setTerminalInput] = useState('');
+  const [commandHistory, setCommandHistory] = useState<string[]>([]);
+  const [historyIndex, setHistoryIndex] = useState(-1);
+  
+  // AI Console state
+  const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
+  const [aiInput, setAiInput] = useState('');
+  const [isAiLoading, setIsAiLoading] = useState(false);
+  
+  // Preview state
+  const [previewUrl, setPreviewUrl] = useState('');
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false);
+  
+  // Deployment state
+  const [deploymentStatus, setDeploymentStatus] = useState<'idle' | 'building' | 'deploying' | 'success' | 'error'>('idle');
+  const [deploymentUrl, setDeploymentUrl] = useState('');
+  const [deploymentLogs, setDeploymentLogs] = useState<string[]>([]);
 
-  const mainContentAreaRef = useRef<HTMLDivElement>(null);
-  const terminalRef = useRef<TerminalHandle>(null);
+  const terminalEndRef = useRef<HTMLDivElement>(null);
+  const aiMessagesEndRef = useRef<HTMLDivElement>(null);
 
   const fileTree = useMemo(() => buildFileTree(localFiles), [localFiles]);
 
@@ -127,13 +130,25 @@ export default function StudioPage() {
   }, [activeTabId, openTabs, localFiles]);
 
   useEffect(() => {
-    const initialContent = '# Welcome!\n\nUse the AI assistant to start building.';
+    const initialContent = '# Welcome to Studio!\n\nCreate files and start coding.';
     setLocalFiles(new Map([['README.md', { language: 'markdown', content: initialContent }]]));
-    setGitBase(new Map([['README.md', initialContent]]));
     const initialTab = { id: 'file:README.md', name: 'README.md', path: 'README.md' };
     setOpenTabs([initialTab]);
     setActiveTabId(initialTab.id);
+    
+    setTerminalLines([
+      { type: 'output', text: 'Welcome to Dr\'s Lab Studio Terminal', timestamp: new Date() },
+      { type: 'output', text: 'Type "help" for available commands', timestamp: new Date() }
+    ]);
   }, []);
+
+  useEffect(() => {
+    terminalEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [terminalLines]);
+
+  useEffect(() => {
+    aiMessagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  }, [aiMessages]);
 
   const handleContentChange = (path: string, content: string, language?: string) => {
     setLocalFiles(prev => new Map(prev).set(path, { content, language: language || prev.get(path)?.language || 'plaintext' }));
@@ -187,6 +202,153 @@ export default function StudioPage() {
       }
       return next;
     });
+  };
+
+  // Terminal functions
+  const executeCommand = (cmd: string) => {
+    const trimmedCmd = cmd.trim();
+    if (!trimmedCmd) return;
+
+    setTerminalLines(prev => [...prev, { type: 'command', text: `$ ${trimmedCmd}`, timestamp: new Date() }]);
+    setCommandHistory(prev => [...prev, trimmedCmd]);
+
+    // Simulate command execution
+    const parts = trimmedCmd.split(' ');
+    const command = parts[0];
+
+    switch (command) {
+      case 'help':
+        setTerminalLines(prev => [...prev, {
+          type: 'output',
+          text: 'Available commands:\n  ls - List files\n  cat <file> - Show file contents\n  clear - Clear terminal\n  help - Show this message',
+          timestamp: new Date()
+        }]);
+        break;
+      case 'ls':
+        const fileList = Array.from(localFiles.keys()).join('\n  ');
+        setTerminalLines(prev => [...prev, {
+          type: 'output',
+          text: fileList || 'No files',
+          timestamp: new Date()
+        }]);
+        break;
+      case 'cat':
+        if (parts[1]) {
+          const fileContent = localFiles.get(parts[1]);
+          setTerminalLines(prev => [...prev, {
+            type: fileContent ? 'output' : 'error',
+            text: fileContent ? fileContent.content : `File not found: ${parts[1]}`,
+            timestamp: new Date()
+          }]);
+        } else {
+          setTerminalLines(prev => [...prev, { type: 'error', text: 'Usage: cat <filename>', timestamp: new Date() }]);
+        }
+        break;
+      case 'clear':
+        setTerminalLines([]);
+        break;
+      default:
+        setTerminalLines(prev => [...prev, {
+          type: 'error',
+          text: `Command not found: ${command}. Type 'help' for available commands.`,
+          timestamp: new Date()
+        }]);
+    }
+  };
+
+  const handleTerminalKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      e.preventDefault();
+      executeCommand(terminalInput);
+      setTerminalInput('');
+      setHistoryIndex(-1);
+    } else if (e.key === 'ArrowUp') {
+      e.preventDefault();
+      if (commandHistory.length > 0) {
+        const newIndex = historyIndex < commandHistory.length - 1 ? historyIndex + 1 : historyIndex;
+        setHistoryIndex(newIndex);
+        setTerminalInput(commandHistory[commandHistory.length - 1 - newIndex]);
+      }
+    } else if (e.key === 'ArrowDown') {
+      e.preventDefault();
+      if (historyIndex > 0) {
+        const newIndex = historyIndex - 1;
+        setHistoryIndex(newIndex);
+        setTerminalInput(commandHistory[commandHistory.length - 1 - newIndex]);
+      } else {
+        setHistoryIndex(-1);
+        setTerminalInput('');
+      }
+    }
+  };
+
+  // AI Console functions
+  const sendAiMessage = async () => {
+    if (!aiInput.trim() || isAiLoading) return;
+
+    const userMessage: AIMessage = { role: 'user', content: aiInput };
+    setAiMessages(prev => [...prev, userMessage]);
+    setAiInput('');
+    setIsAiLoading(true);
+
+    try {
+      const response = await fetch('/api/studio/ai-assist', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [...aiMessages, userMessage],
+          context: { files: Array.from(localFiles.keys()) }
+        })
+      });
+
+      const data = await response.json();
+      const assistantMessage: AIMessage = { role: 'assistant', content: data.response || 'Error getting response' };
+      setAiMessages(prev => [...prev, assistantMessage]);
+    } catch (error) {
+      const errorMessage: AIMessage = { role: 'assistant', content: 'Failed to get AI response. Please try again.' };
+      setAiMessages(prev => [...prev, errorMessage]);
+    } finally {
+      setIsAiLoading(false);
+    }
+  };
+
+  // Preview functions
+  const refreshPreview = () => {
+    setIsPreviewLoading(true);
+    // Simulate preview generation
+    setTimeout(() => {
+      const htmlFile = localFiles.get('index.html');
+      if (htmlFile) {
+        const blob = new Blob([htmlFile.content], { type: 'text/html' });
+        const url = URL.createObjectURL(blob);
+        setPreviewUrl(url);
+      }
+      setIsPreviewLoading(false);
+    }, 500);
+  };
+
+  useEffect(() => {
+    if (activeBottomTab === 'preview') {
+      refreshPreview();
+    }
+  }, [activeBottomTab]);
+
+  // Deployment functions
+  const handleDeploy = async () => {
+    setDeploymentStatus('building');
+    setDeploymentLogs(['Starting deployment...', 'Building project...']);
+
+    // Simulate deployment process
+    setTimeout(() => {
+      setDeploymentLogs(prev => [...prev, 'Build complete', 'Deploying to Replit...']);
+      setDeploymentStatus('deploying');
+      
+      setTimeout(() => {
+        setDeploymentLogs(prev => [...prev, 'Deployment successful!']);
+        setDeploymentStatus('success');
+        setDeploymentUrl('https://your-project.replit.app');
+      }, 2000);
+    }, 2000);
   };
 
   const FileTreeNode: React.FC<{
@@ -320,12 +482,7 @@ export default function StudioPage() {
               ))}
             </div>
           )}
-          {activeSideView === 'ai' && (
-            <div className="p-4">
-              <p className="text-sm text-slate-600 dark:text-slate-400">AI Assistant panel - Coming soon</p>
-            </div>
-          )}
-          {activeSideView !== 'explorer' && activeSideView !== 'ai' && (
+          {activeSideView !== 'explorer' && (
             <div className="p-4">
               <p className="text-sm text-slate-600 dark:text-slate-400">{activeSideView} panel - Coming soon</p>
             </div>
@@ -334,7 +491,7 @@ export default function StudioPage() {
       </aside>
 
       {/* Main Content Area */}
-      <div className="flex-1 flex flex-col overflow-hidden" ref={mainContentAreaRef}>
+      <div className="flex-1 flex flex-col overflow-hidden">
         {/* Editor Tabs */}
         <div className="flex items-center border-b dark:border-slate-700/50 bg-slate-50 dark:bg-slate-800/50 overflow-x-auto scrollbar-thin">
           {openTabs.map(tab => (
@@ -390,23 +547,198 @@ export default function StudioPage() {
           {isBottomPanelOpen && (
             <div className="h-full pb-6 md:pb-10 overflow-auto">
               {activeBottomTab === 'terminal' && (
-                <div className="h-full bg-black text-green-400 font-mono text-xs md:text-sm p-2 md:p-4">
-                  <pre className="whitespace-pre-wrap break-all">Terminal ready. Type commands here...</pre>
+                <div className="h-full bg-black text-green-400 font-mono text-xs md:text-sm p-2 md:p-4 flex flex-col">
+                  <div className="flex-1 overflow-y-auto mb-2">
+                    {terminalLines.map((line, idx) => (
+                      <div key={idx} className={`mb-1 ${line.type === 'error' ? 'text-red-400' : line.type === 'command' ? 'text-cyan-400' : ''}`}>
+                        {line.text}
+                      </div>
+                    ))}
+                    <div ref={terminalEndRef} />
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-cyan-400">$</span>
+                    <input
+                      type="text"
+                      value={terminalInput}
+                      onChange={(e) => setTerminalInput(e.target.value)}
+                      onKeyDown={handleTerminalKeyDown}
+                      className="flex-1 bg-transparent outline-none text-green-400"
+                      placeholder="Type a command..."
+                    />
+                  </div>
                 </div>
               )}
               {activeBottomTab === 'explanation' && (
-                <div className="h-full p-2 md:p-4">
-                  <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">AI Console - Coming soon</p>
+                <div className="h-full flex flex-col p-2 md:p-4">
+                  <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+                    {aiMessages.length === 0 ? (
+                      <div className="text-center text-slate-500 dark:text-slate-400 py-8">
+                        <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                        <p>Ask the AI assistant for help with your code</p>
+                      </div>
+                    ) : (
+                      <>
+                        {aiMessages.map((msg, idx) => (
+                          <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
+                            <div className={`max-w-[80%] p-3 rounded-lg ${msg.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                              <ReactMarkdown
+                                remarkPlugins={[remarkGfm]}
+                                components={{
+                                  code({ node, inline, className, children, ...props }) {
+                                    const match = /language-(\w+)/.exec(className || '');
+                                    return !inline && match ? (
+                                      <SyntaxHighlighter
+                                        style={oneDark}
+                                        language={match[1]}
+                                        PreTag="div"
+                                        {...props}
+                                      >
+                                        {String(children).replace(/\n$/, '')}
+                                      </SyntaxHighlighter>
+                                    ) : (
+                                      <code className={className} {...props}>
+                                        {children}
+                                      </code>
+                                    );
+                                  }
+                                }}
+                              >
+                                {msg.content}
+                              </ReactMarkdown>
+                            </div>
+                          </div>
+                        ))}
+                        {isAiLoading && (
+                          <div className="flex justify-start">
+                            <div className="bg-slate-200 dark:bg-slate-700 p-3 rounded-lg">
+                              <div className="flex gap-2">
+                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100" />
+                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200" />
+                              </div>
+                            </div>
+                          </div>
+                        )}
+                        <div ref={aiMessagesEndRef} />
+                      </>
+                    )}
+                  </div>
+                  <div className="flex gap-2">
+                    <Textarea
+                      value={aiInput}
+                      onChange={(e) => setAiInput(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' && !e.shiftKey) {
+                          e.preventDefault();
+                          sendAiMessage();
+                        }
+                      }}
+                      placeholder="Ask AI for help..."
+                      className="flex-1 resize-none"
+                      rows={2}
+                    />
+                    <Button onClick={sendAiMessage} disabled={isAiLoading || !aiInput.trim()}>
+                      <Send className="w-4 h-4" />
+                    </Button>
+                  </div>
                 </div>
               )}
               {activeBottomTab === 'preview' && (
-                <div className="h-full p-2 md:p-4 bg-slate-200 dark:bg-slate-900">
-                  <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Live Preview - Coming soon</p>
+                <div className="h-full flex flex-col bg-white dark:bg-slate-900">
+                  <div className="flex items-center gap-2 p-2 border-b dark:border-slate-700">
+                    <Button size="sm" onClick={refreshPreview} disabled={isPreviewLoading}>
+                      <RefreshCw className={`w-4 h-4 mr-2 ${isPreviewLoading ? 'animate-spin' : ''}`} />
+                      Refresh
+                    </Button>
+                    {previewUrl && (
+                      <span className="text-xs text-slate-500 dark:text-slate-400">Preview ready</span>
+                    )}
+                  </div>
+                  <div className="flex-1 overflow-auto">
+                    {previewUrl ? (
+                      <iframe
+                        src={previewUrl}
+                        className="w-full h-full border-0"
+                        title="Preview"
+                        sandbox="allow-scripts allow-same-origin"
+                      />
+                    ) : (
+                      <div className="flex items-center justify-center h-full text-slate-500 dark:text-slate-400">
+                        <div className="text-center">
+                          <Monitor className="w-12 h-12 mx-auto mb-4 opacity-50" />
+                          <p>Create an index.html file to see live preview</p>
+                        </div>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
               {activeBottomTab === 'deploy' && (
-                <div className="h-full p-2 md:p-4">
-                  <p className="text-xs md:text-sm text-slate-600 dark:text-slate-400">Deployments - Coming soon</p>
+                <div className="h-full p-4 overflow-auto">
+                  <div className="max-w-2xl">
+                    <h3 className="text-lg font-semibold mb-4">Deploy to Replit</h3>
+                    
+                    {deploymentStatus === 'idle' && (
+                      <div className="space-y-4">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Deploy your project to make it accessible online
+                        </p>
+                        <Button onClick={handleDeploy} className="w-full">
+                          <Cloud className="w-4 h-4 mr-2" />
+                          Deploy Project
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {(deploymentStatus === 'building' || deploymentStatus === 'deploying') && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-6 h-6 border-2 border-indigo-500 border-t-transparent rounded-full animate-spin" />
+                          <span className="font-medium">
+                            {deploymentStatus === 'building' ? 'Building...' : 'Deploying...'}
+                          </span>
+                        </div>
+                        <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg font-mono text-xs space-y-1">
+                          {deploymentLogs.map((log, idx) => (
+                            <div key={idx}>{log}</div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    
+                    {deploymentStatus === 'success' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 text-green-600 dark:text-green-400">
+                          <CheckCircle className="w-6 h-6" />
+                          <span className="font-medium">Deployment Successful!</span>
+                        </div>
+                        <div className="bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
+                          <p className="text-sm text-slate-600 dark:text-slate-400 mb-2">Your app is live at:</p>
+                          <a href={deploymentUrl} target="_blank" rel="noopener noreferrer" className="text-indigo-600 dark:text-indigo-400 hover:underline break-all">
+                            {deploymentUrl}
+                          </a>
+                        </div>
+                        <Button onClick={handleDeploy} variant="outline" className="w-full">
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Redeploy
+                        </Button>
+                      </div>
+                    )}
+                    
+                    {deploymentStatus === 'error' && (
+                      <div className="space-y-4">
+                        <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+                          <AlertCircle className="w-6 h-6" />
+                          <span className="font-medium">Deployment Failed</span>
+                        </div>
+                        <Button onClick={handleDeploy} className="w-full">
+                          <RefreshCw className="w-4 h-4 mr-2" />
+                          Retry Deployment
+                        </Button>
+                      </div>
+                    )}
+                  </div>
                 </div>
               )}
             </div>

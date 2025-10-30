@@ -133,7 +133,7 @@ export default function ChatPage({
               >
                 <div className="flex items-center">
                   <MessageCircle className="w-5 h-5 mr-3" />
-                  <span className="font-medium">Gemini</span>
+                  <span className="font-medium">DOC</span>
                 </div>
                 <span className="text-xs bg-slate-200 dark:bg-slate-700 px-2 py-1 rounded">Therapy</span>
               </button>

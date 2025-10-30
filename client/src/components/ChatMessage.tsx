@@ -39,7 +39,7 @@ export function ChatMessage({ message, model }: ChatMessageProps) {
         )}
       >
         <div className="text-xs font-medium text-muted-foreground">
-          {isUser ? "You" : isGemini ? "Gemini" : "MilesAI"}
+          {isUser ? "You" : isGemini ? "DOC" : "MilesAI"}
         </div>
         <div
           className={cn(
