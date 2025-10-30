@@ -121,6 +121,7 @@ export default function StudioPage({
   const [aiMessages, setAiMessages] = useState<AIMessage[]>([]);
   const [aiInput, setAiInput] = useState('');
   const [isAiLoading, setIsAiLoading] = useState(false);
+  const [aiMode, setAiMode] = useState<'assistant' | 'agent'>('assistant');
   
   // Preview state
   const [previewUrl, setPreviewUrl] = useState('');
@@ -299,6 +300,60 @@ export default function StudioPage({
   };
 
   // AI Console functions
+  const processAgentCommands = (responseText: string): string => {
+    const commandRegex = /\[COMMAND:(\w+):(\{[^}]+\})\]/g;
+    let match;
+    let processedResponse = responseText;
+
+    while ((match = commandRegex.exec(responseText)) !== null) {
+      const [fullMatch, action, payloadStr] = match;
+      try {
+        const payload = JSON.parse(payloadStr);
+
+        switch (action) {
+          case 'CREATE_FILE':
+          case 'WRITE_FILE':
+            if (payload.path && payload.content !== undefined) {
+              handleContentChange(payload.path, payload.content, payload.language || 'plaintext');
+              if (!openTabs.some(t => t.path === payload.path)) {
+                handleFileClick(payload.path);
+              }
+              processedResponse = processedResponse.replace(fullMatch, `✓ File ${action === 'CREATE_FILE' ? 'created' : 'updated'}: ${payload.path}`);
+            }
+            break;
+
+          case 'RUN_TERMINAL':
+            if (payload.command) {
+              executeCommand(payload.command);
+              processedResponse = processedResponse.replace(fullMatch, `✓ Executed: ${payload.command}`);
+            }
+            break;
+
+          case 'DELETE_FILE':
+            if (payload.path) {
+              handleDelete(payload.path, 'file');
+              processedResponse = processedResponse.replace(fullMatch, `✓ Deleted: ${payload.path}`);
+            }
+            break;
+
+          case 'OPEN_FILE':
+            if (payload.path && localFiles.has(payload.path)) {
+              handleFileClick(payload.path);
+              processedResponse = processedResponse.replace(fullMatch, `✓ Opened: ${payload.path}`);
+            }
+            break;
+
+          default:
+            console.warn(`Unknown agent command: ${action}`);
+        }
+      } catch (error) {
+        console.error("Failed to process agent command:", fullMatch, error);
+      }
+    }
+
+    return processedResponse.replace(commandRegex, '').trim();
+  };
+
   const sendAiMessage = async () => {
     if (!aiInput.trim() || isAiLoading) return;
 
@@ -308,17 +363,43 @@ export default function StudioPage({
     setIsAiLoading(true);
 
     try {
+      const systemPrompt = aiMode === 'agent' 
+        ? `You are an autonomous AI coding agent with full control over a development environment. You can create, modify, delete files, and execute terminal commands.
+
+To perform actions, use these special commands in your response:
+- [COMMAND:CREATE_FILE:{"path":"filename.ext","content":"code here","language":"javascript"}] - Creates a new file
+- [COMMAND:WRITE_FILE:{"path":"filename.ext","content":"new code"}] - Overwrites existing file
+- [COMMAND:DELETE_FILE:{"path":"filename.ext"}] - Deletes a file
+- [COMMAND:RUN_TERMINAL:{"command":"npm install package"}] - Executes terminal command
+- [COMMAND:OPEN_FILE:{"path":"filename.ext"}] - Opens a file in editor
+
+Always explain what you're doing and why. You can use multiple commands in one response.
+
+Current project files: ${Array.from(localFiles.keys()).join(', ')}`
+        : 'You are a helpful coding assistant. Provide code suggestions and explanations.';
+
       const response = await fetch('/api/studio/ai-assist', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           messages: [...aiMessages, userMessage],
-          context: { files: Array.from(localFiles.keys()) }
+          context: { 
+            files: Array.from(localFiles.keys()),
+            mode: aiMode,
+            systemPrompt
+          }
         })
       });
 
       const data = await response.json();
-      const assistantMessage: AIMessage = { role: 'assistant', content: data.response || 'Error getting response' };
+      let responseContent = data.response || 'Error getting response';
+
+      // If in agent mode, process commands
+      if (aiMode === 'agent') {
+        responseContent = processAgentCommands(responseContent);
+      }
+
+      const assistantMessage: AIMessage = { role: 'assistant', content: responseContent };
       setAiMessages(prev => [...prev, assistantMessage]);
     } catch (error) {
       const errorMessage: AIMessage = { role: 'assistant', content: 'Failed to get AI response. Please try again.' };
@@ -586,18 +667,62 @@ export default function StudioPage({
                 </div>
               )}
               {activeBottomTab === 'explanation' && (
-                <div className="h-full flex flex-col p-2 md:p-4">
-                  <div className="flex-1 overflow-y-auto mb-4 space-y-4">
+                <div className="h-full flex flex-col">
+                  <div className="p-2 md:p-4 border-b dark:border-slate-700 bg-slate-100 dark:bg-slate-800">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold text-sm">AI Console</h3>
+                      <div className="flex items-center gap-2 text-xs">
+                        <span className={aiMode === 'assistant' ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}>
+                          Assistant
+                        </span>
+                        <button
+                          onClick={() => setAiMode(aiMode === 'assistant' ? 'agent' : 'assistant')}
+                          className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                            aiMode === 'agent' ? 'bg-indigo-600' : 'bg-slate-300 dark:bg-slate-600'
+                          }`}
+                          title={`Switch to ${aiMode === 'assistant' ? 'Agent' : 'Assistant'} Mode`}
+                        >
+                          <span
+                            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                              aiMode === 'agent' ? 'translate-x-5' : 'translate-x-1'
+                            }`}
+                          />
+                        </button>
+                        <span className={aiMode === 'agent' ? 'font-semibold text-indigo-600 dark:text-indigo-400' : 'text-slate-500'}>
+                          Agent
+                        </span>
+                      </div>
+                    </div>
+                    {aiMode === 'agent' && (
+                      <div className="mt-2 p-2 bg-indigo-50 dark:bg-indigo-900/20 rounded text-xs text-indigo-700 dark:text-indigo-300">
+                        <Code2 className="w-3 h-3 inline mr-1" />
+                        Agent mode: AI can create files, run commands, and modify your codebase autonomously
+                      </div>
+                    )}
+                  </div>
+                  
+                  <div className="flex-1 overflow-y-auto p-2 md:p-4 space-y-4">
                     {aiMessages.length === 0 ? (
                       <div className="text-center text-slate-500 dark:text-slate-400 py-8">
                         <Zap className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                        <p>Ask the AI assistant for help with your code</p>
+                        <p className="font-medium mb-2">
+                          {aiMode === 'agent' ? 'AI Coding Agent Ready' : 'AI Assistant Ready'}
+                        </p>
+                        <p className="text-sm">
+                          {aiMode === 'agent' 
+                            ? 'Give me a task and I\'ll build it for you. I can create files, write code, and execute commands.'
+                            : 'Ask me for help with your code and I\'ll provide suggestions and explanations.'}
+                        </p>
                       </div>
                     ) : (
                       <>
                         {aiMessages.map((msg, idx) => (
                           <div key={idx} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                            <div className={`max-w-[80%] p-3 rounded-lg ${msg.role === 'user' ? 'bg-indigo-500 text-white' : 'bg-slate-200 dark:bg-slate-700'}`}>
+                            <div className={`max-w-[80%] p-3 rounded-lg ${
+                              msg.role === 'user' 
+                                ? 'bg-indigo-500 text-white' 
+                                : 'bg-slate-200 dark:bg-slate-700'
+                            }`}>
                               <ReactMarkdown
                                 remarkPlugins={[remarkGfm]}
                                 components={{
@@ -628,10 +753,15 @@ export default function StudioPage({
                         {isAiLoading && (
                           <div className="flex justify-start">
                             <div className="bg-slate-200 dark:bg-slate-700 p-3 rounded-lg">
-                              <div className="flex gap-2">
-                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
-                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-100" />
-                                <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce delay-200" />
+                              <div className="flex items-center gap-2">
+                                <div className="flex gap-1">
+                                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" />
+                                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
+                                  <div className="w-2 h-2 bg-slate-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                                </div>
+                                <span className="text-xs text-slate-600 dark:text-slate-400">
+                                  {aiMode === 'agent' ? 'Agent working...' : 'Thinking...'}
+                                </span>
                               </div>
                             </div>
                           </div>
@@ -640,23 +770,34 @@ export default function StudioPage({
                       </>
                     )}
                   </div>
-                  <div className="flex gap-2">
-                    <Textarea
-                      value={aiInput}
-                      onChange={(e) => setAiInput(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter' && !e.shiftKey) {
-                          e.preventDefault();
-                          sendAiMessage();
+                  
+                  <div className="p-2 md:p-4 border-t dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50">
+                    <div className="flex gap-2">
+                      <Textarea
+                        value={aiInput}
+                        onChange={(e) => setAiInput(e.target.value)}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter' && !e.shiftKey) {
+                            e.preventDefault();
+                            sendAiMessage();
+                          }
+                        }}
+                        placeholder={
+                          aiMode === 'agent' 
+                            ? 'e.g., Create a React todo app with TypeScript...'
+                            : 'Ask AI for help...'
                         }
-                      }}
-                      placeholder="Ask AI for help..."
-                      className="flex-1 resize-none"
-                      rows={2}
-                    />
-                    <Button onClick={sendAiMessage} disabled={isAiLoading || !aiInput.trim()}>
-                      <Send className="w-4 h-4" />
-                    </Button>
+                        className="flex-1 resize-none text-sm"
+                        rows={2}
+                      />
+                      <Button 
+                        onClick={sendAiMessage} 
+                        disabled={isAiLoading || !aiInput.trim()}
+                        className="shrink-0"
+                      >
+                        <Send className="w-4 h-4" />
+                      </Button>
+                    </div>
                   </div>
                 </div>
               )}

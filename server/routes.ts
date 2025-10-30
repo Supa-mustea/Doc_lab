@@ -202,10 +202,17 @@ export function registerRoutes(app: Express) {
         return res.status(400).json({ error: "Messages array is required" });
       }
 
-      const lastMessage = messages[messages.length - 1]?.content || "";
-      const contextInfo = context?.files ? `\n\nContext: Files in project: ${context.files.join(', ')}` : '';
+      const mode = context?.mode || 'assistant';
+      const systemPrompt = context?.systemPrompt || 'You are a helpful coding assistant.';
+      const contextInfo = context?.files ? `\n\nCurrent project files: ${context.files.join(', ')}` : '';
       
-      const response = await milesAi.generateResponse(lastMessage + contextInfo);
+      // Prepare messages with system context
+      const conversationMessages = [
+        { role: 'system', content: systemPrompt + contextInfo },
+        ...messages
+      ];
+
+      const response = await generateDevResponse(conversationMessages, currentModel);
       
       res.json({ response });
     } catch (error) {
