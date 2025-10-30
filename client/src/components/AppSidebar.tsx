@@ -14,7 +14,13 @@ import { MessageCircle, Code2, Plus, Moon, Sun, Settings } from "lucide-react";
 import { Link, useLocation } from "wouter";
 import { Button } from "@/components/ui/button";
 import { useTheme } from "./ThemeProvider";
-import { Badge } from "@/components/ui/badge";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 interface AppSidebarProps {
   currentModel: "gemini" | "milesai";
@@ -88,37 +94,28 @@ export function AppSidebar({
             <SidebarGroupLabel>AI Model</SidebarGroupLabel>
           </div>
           <SidebarGroupContent>
-            <div className="flex flex-col gap-1 px-2">
-              <button
-                onClick={() => onModelChange("gemini")}
-                data-testid="button-select-gemini"
-                className={`w-full flex items-center justify-between p-2 md:p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  currentModel === "gemini"
-                    ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                }`}
-              >
-                <div className="flex items-center min-w-0">
-                  <MessageCircle className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3 shrink-0" />
-                  <span className="font-medium text-sm md:text-base truncate">DOC</span>
-                </div>
-                <Badge variant="secondary" className="text-xs shrink-0">Therapy</Badge>
-              </button>
-              <button
-                onClick={() => onModelChange("milesai")}
-                data-testid="button-select-milesai"
-                className={`w-full flex items-center justify-between p-2 md:p-3 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-indigo-500 ${
-                  currentModel === "milesai"
-                    ? "bg-indigo-100 dark:bg-indigo-900/50 text-indigo-700 dark:text-indigo-300"
-                    : "text-gray-700 dark:text-gray-300 hover:bg-slate-100 dark:hover:bg-slate-700/50"
-                }`}
-              >
-                <div className="flex items-center min-w-0">
-                  <Code2 className="w-4 h-4 md:w-5 md:h-5 mr-2 md:mr-3 shrink-0" />
-                  <span className="font-medium text-sm md:text-base truncate">MilesAI</span>
-                </div>
-                <Badge variant="secondary" className="text-xs shrink-0">Dev</Badge>
-              </button>
+            <div className="px-2">
+              <Select value={currentModel} onValueChange={onModelChange}>
+                <SelectTrigger className="w-full" data-testid="model-selector">
+                  <SelectValue placeholder="Select AI Model" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="gemini" data-testid="option-select-gemini">
+                    <div className="flex items-center gap-2">
+                      <MessageCircle className="w-4 h-4" />
+                      <span>DOC</span>
+                      <span className="text-xs text-muted-foreground ml-auto">Therapy</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="milesai" data-testid="option-select-milesai">
+                    <div className="flex items-center gap-2">
+                      <Code2 className="w-4 h-4" />
+                      <span>MilesAI</span>
+                      <span className="text-xs text-muted-foreground ml-auto">Dev</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
             </div>
           </SidebarGroupContent>
         </SidebarGroup>
